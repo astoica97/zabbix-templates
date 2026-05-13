@@ -525,8 +525,3 @@ This template has been tested on:
 |Unity SR [{#SR.NAME}]: no recent snapshots|<p></p>|`last(/Dell EMC Unity by HTTP/unity.snap.lastage[{#SR.ID}])>{$UNITY.SNAP.AGE.WARN} and last(/Dell EMC Unity by HTTP/unity.snap.count[{#SR.ID}])>0`|WARNING|
 
 
-## Feedback
-
-Please report any issues with the template at [`https://support.zabbix.com`](https://support.zabbix.com)
-
-You can also provide feedback, discuss the template, or ask for help at [`ZABBIX forums`](https://www.zabbix.com/forum/zabbix-suggestions-and-feedback)
