@@ -1,0 +1,3305 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+  - uuid: 45ee433c58f845ffbdb46c76858548a5
+    name: Templates CSN
+  templates:
+  - uuid: 16b0b3ea67a542979585801d74cdae95
+    vendor:
+      name: ECS
+      version: 7.0-1
+    template: Dell EMC Unity by HTTP
+    name: Dell EMC Unity by HTTP
+    description: |
+      Plantilla de monitorización para cabinas Dell EMC Unity (XT 380/480/680/880,
+      All-Flash, Hybrid) vía Unisphere Management REST API.
+
+      Cubre:
+       - Salud del sistema y software version
+       - Licencias (LLD)
+       - Hardware: SP, discos, DAEs, fans, PSU, baterías, IO modules, LCC, SSC, SSD, memory (LLD)
+       - Pools (LLD) con %uso, %suscripción, dedup/compresión
+       - LUNs (LLD) con tamaños y %allocated
+       - Filesystems (LLD) con tamaños y %uso
+       - NAS Servers (LLD) con failover
+       - Sesiones de replicación (LLD) con lag y estado
+       - Snapshots por storage resource (LLD)
+       - Alertas activas por severidad
+       - Performance (CPU SP, IOPS, latencia, throughput) vía metricRealTimeQuery
+
+      Autenticación: Basic auth + cabecera X-EMC-REST-CLIENT: true.
+      Probada en Unity OE 5.x.
+
+      Macros principales:
+        {$UNITY.URL}       https://<management-ip-or-fqdn> (sin / final)
+        {$UNITY.USER}      usuario read-only
+        {$UNITY.PASSWORD}  contraseña (secret text)
+    groups:
+    - name: Templates CSN
+    macros:
+    - macro: '{$UNITY.URL}'
+      value: https://unity-mgmt.example.com
+      description: URL base de la Unisphere REST API (sin barra final).
+    - macro: '{$UNITY.USER}'
+      value: monitor
+      description: Usuario read-only de la Unisphere REST API.
+    - macro: '{$UNITY.PASSWORD}'
+      value: ''
+      type: SECRET_TEXT
+      description: Contraseña del usuario.
+    - macro: '{$UNITY.HTTP.TIMEOUT}'
+      value: 30s
+      description: Timeout HTTP.
+    - macro: '{$UNITY.POOL.PUSED.WARN}'
+      value: '90'
+      description: Umbral WARN (%) de uso de pool.
+    - macro: '{$UNITY.POOL.PUSED.HIGH}'
+      value: '95'
+      description: Umbral HIGH (%) de uso de pool.
+    - macro: '{$UNITY.POOL.PUSED.CRIT}'
+      value: '100'
+      description: Umbral CRIT (%) de uso de pool.
+    - macro: '{$UNITY.POOL.SUBSCRIBED.WARN}'
+      value: '150'
+      description: Umbral WARN (%) oversubscription pool.
+    - macro: '{$UNITY.FS.PUSED.WARN}'
+      value: '90'
+      description: Umbral WARN (%) de uso de filesystem.
+    - macro: '{$UNITY.FS.PUSED.HIGH}'
+      value: '95'
+      description: Umbral HIGH (%) de uso de filesystem.
+    - macro: '{$UNITY.LUN.PUSED.WARN}'
+      value: '90'
+      description: Umbral WARN (%) de uso de LUN thin.
+    - macro: '{$UNITY.SP.CPU.WARN}'
+      value: '80'
+      description: Umbral WARN (%) CPU SP.
+    - macro: '{$UNITY.SP.CPU.HIGH}'
+      value: '90'
+      description: Umbral HIGH (%) CPU SP.
+    - macro: '{$UNITY.LUN.LLD.MATCHES}'
+      value: .*
+      description: Regex de nombres de LUN INCLUIDOS.
+    - macro: '{$UNITY.LUN.LLD.NOT_MATCHES}'
+      value: CHANGE_IF_NEEDED
+      description: Regex de nombres de LUN EXCLUIDOS.
+    - macro: '{$UNITY.FS.LLD.MATCHES}'
+      value: .*
+      description: Regex de nombres de FS INCLUIDOS.
+    - macro: '{$UNITY.FS.LLD.NOT_MATCHES}'
+      value: CHANGE_IF_NEEDED
+      description: Regex de nombres de FS EXCLUIDOS.
+    - macro: '{$UNITY.POOL.LLD.MATCHES}'
+      value: .*
+      description: Regex de nombres de pool INCLUIDOS.
+    - macro: '{$UNITY.POOL.LLD.NOT_MATCHES}'
+      value: CHANGE_IF_NEEDED
+      description: Regex de nombres de pool EXCLUIDOS.
+    - macro: '{$UNITY.SNAP.AGE.WARN}'
+      value: '604800'
+      description: Edad máx (s) sin nueva snap (default 7d).
+    - macro: '{$UNITY.PERF.INTERVAL}'
+      value: '60'
+      description: Ventana (s) del realtime metric query.
+    - macro: '{$UNITY.FS.PUSED.CRIT}'
+      value: '100'
+      description: Filesystem used percentage threshold for DISASTER trigger.
+    valuemaps:
+    - uuid: 33b1c1e46ff6412ba285d5c23628151e
+      name: Unity health value
+      mappings:
+      - value: '0'
+        newvalue: UNKNOWN
+      - value: '5'
+        newvalue: OK
+      - value: '7'
+        newvalue: OK_BUT (info)
+      - value: '10'
+        newvalue: DEGRADED
+      - value: '15'
+        newvalue: MINOR
+      - value: '20'
+        newvalue: MAJOR
+      - value: '25'
+        newvalue: CRITICAL
+      - value: '30'
+        newvalue: NON_RECOVERABLE
+    - uuid: 9e0d6befa0bc49a899639073d3c7b3fc
+      name: Unity boolean
+      mappings:
+      - value: '0'
+        newvalue: 'false'
+      - value: '1'
+        newvalue: 'true'
+    - uuid: e33cfb02c33e4198b7868a2db31f2258
+      name: Unity replication status
+      mappings:
+      - value: '0'
+        newvalue: Idle
+      - value: '1'
+        newvalue: OK
+      - value: '2'
+        newvalue: Auto sync configured
+      - value: '3'
+        newvalue: Manual sync required
+      - value: '4'
+        newvalue: Updating
+      - value: '5'
+        newvalue: Failed over
+      - value: '6'
+        newvalue: Failed over with error
+      - value: '7'
+        newvalue: Hibernated
+      - value: '8'
+        newvalue: Lost communication
+      - value: '9'
+        newvalue: Lost sync communication
+      - value: '10'
+        newvalue: Non-recoverable error
+    - uuid: 28b0e0eb39cb4762aafa81aa7b0f5d64
+      name: Unity alert severity
+      mappings:
+      - value: '0'
+        newvalue: Emergency
+      - value: '1'
+        newvalue: Alert
+      - value: '2'
+        newvalue: Critical
+      - value: '3'
+        newvalue: Error
+      - value: '4'
+        newvalue: Warning
+      - value: '5'
+        newvalue: Notice
+      - value: '6'
+        newvalue: Info
+      - value: '7'
+        newvalue: Debug
+    items:
+    - uuid: 71a12406e2a1457b8da0018bef669573
+      name: 'Unity: Get system info'
+      type: HTTP_AGENT
+      key: unity.system.get
+      history: '0'
+      trends: '0'
+      value_type: TEXT
+      description: 'Master item: system instance JSON.'
+      url: "{$UNITY.URL}/api/instances/system/0?fields=name,model,serialNumber,health,platform,macAddress,internalModel"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - &id001
+        name: X-EMC-REST-CLIENT
+        value: 'true'
+      - &id002
+        name: Accept
+        value: application/json
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      delay: 5m
+      tags:
+      - tag: component
+        value: raw
+    - uuid: 53091560bd6d4770ad96c07d11b5ec0d
+      name: 'Unity: System name'
+      type: DEPENDENT
+      key: unity.system.name
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.name
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.system.get
+      tags: []
+    - uuid: 5f42f6a873af4e70b355147e96ea97c3
+      name: 'Unity: Model'
+      type: DEPENDENT
+      key: unity.system.model
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.model
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.system.get
+      tags: []
+    - uuid: efa206092dac4db6aada15cbe3865755
+      name: 'Unity: Serial number'
+      type: DEPENDENT
+      key: unity.system.serial
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.serialNumber
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.system.get
+      tags: []
+    - uuid: 7a201a87dd3045c2bed2b1bf201f57ab
+      name: 'Unity: Platform'
+      type: DEPENDENT
+      key: unity.system.platform
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.platform
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.system.get
+      tags: []
+    - uuid: 39dadf75d1774c38ae9c48f18a97afad
+      name: 'Unity: Health value'
+      type: DEPENDENT
+      key: unity.system.health.value
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.health.value
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.system.get
+      tags: []
+      valuemap:
+        name: Unity health value
+    - uuid: 3caf3ef56cf0475fafce5b0d82bafcbe
+      name: 'Unity: Health description'
+      type: DEPENDENT
+      key: unity.system.health.desc
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.content.health.descriptionIds
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      - type: JAVASCRIPT
+        parameters:
+        - try{var v=JSON.parse(value);return Array.isArray(v)?v.join(', '):value;}catch(e){return value;}
+      master_item:
+        key: unity.system.get
+      tags: []
+    - uuid: 7bdc2c64ef4e44f2af6839bfa0b909be
+      name: 'Unity: Get software version'
+      type: HTTP_AGENT
+      key: unity.softver.get
+      history: '0'
+      trends: '0'
+      value_type: TEXT
+      description: 'Master item: returns raw JSON from Unisphere REST API.'
+      url: '{$UNITY.URL}/api/types/installedSoftwareVersion/instances?fields=id,version,fullVersion,releaseDate'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      delay: 1h
+      tags:
+      - tag: component
+        value: raw
+    - uuid: 501eb1504e2247849877ddcf958470fa
+      name: 'Unity: Software version'
+      type: DEPENDENT
+      key: unity.softver.version
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[0].content.version
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.softver.get
+      tags: []
+    - uuid: 4190262534764a459375ec3ee9c8cab6
+      name: 'Unity: Full software version'
+      type: DEPENDENT
+      key: unity.softver.full
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: CHAR
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[0].content.fullVersion
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.softver.get
+      tags: []
+    - uuid: f69105d966134da7b4fa8cfab716f2ba
+      name: 'Unity: Get active alerts'
+      type: HTTP_AGENT
+      key: unity.alerts.get
+      history: '0'
+      trends: '0'
+      value_type: TEXT
+      description: Active (state=2) alerts.
+      url: "{$UNITY.URL}/api/types/alert/instances?filter=state%20EQ%202&fields=id,severity,timestamp,description,messageId,component"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      delay: 2m
+      tags:
+      - tag: component
+        value: raw
+    - uuid: 63019f979fe84b65aab34da3eb203955
+      name: 'Unity: Active alerts [Emergency]'
+      type: DEPENDENT
+      key: unity.alerts.count[0]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Emergency (0).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==0)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 63efd87f223349379982304a70cb651f
+      name: 'Unity: Active alerts [Alert]'
+      type: DEPENDENT
+      key: unity.alerts.count[1]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Alert (1).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==1)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 16ad65c2dfa44bc0b9c1f73d595a75ad
+      name: 'Unity: Active alerts [Critical]'
+      type: DEPENDENT
+      key: unity.alerts.count[2]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Critical (2).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==2)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 12f96bd855354c4fb300ad6b5553f86c
+      name: 'Unity: Active alerts [Error]'
+      type: DEPENDENT
+      key: unity.alerts.count[3]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Error (3).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==3)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 304d8b18deee47d09ad8c9fbcc760ee1
+      name: 'Unity: Active alerts [Warning]'
+      type: DEPENDENT
+      key: unity.alerts.count[4]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Warning (4).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==4)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: c9bb0184f5a84aef9edc8062a62a3b8d
+      name: 'Unity: Active alerts [Notice]'
+      type: DEPENDENT
+      key: unity.alerts.count[5]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Notice (5).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==5)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 82e1f6deb15549a892ef8498ee53d13f
+      name: 'Unity: Active alerts [Info]'
+      type: DEPENDENT
+      key: unity.alerts.count[6]
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: UNSIGNED
+      units: ''
+      description: Número de alertas activas con severidad Info (6).
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);var n=0;if(d&&d.entries){for(var i=0;i<d.entries.length;i++)if(d.entries[i].content&&d.entries[i].content.severity==6)n++;}return n;}catch(e){return 0;}"
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 7984da5df5b74d18a69bc4eb9cbd137b
+      name: 'Unity: Active alerts (raw JSON)'
+      type: DEPENDENT
+      key: unity.alerts.raw
+      delay: '0'
+      history: 7d
+      trends: '0'
+      value_type: TEXT
+      units: ''
+      description: ''
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      master_item:
+        key: unity.alerts.get
+      tags: []
+    - uuid: 443cedb1c0b244528b7d493d8faae4a2
+      name: 'Unity: Get realtime performance'
+      type: SCRIPT
+      key: unity.perf.get
+      delay: 5m
+      history: '0'
+      trends: '0'
+      value_type: TEXT
+      description: "Master script item: ejecuta un metricRealTimeQuery contra la cabina y devuelve el JSON con valores agregados de CPU SP, IOPS, latencia, bandwidth y red."
+      timeout: 180s
+      params: |
+        // Dell EMC Unity real-time performance metric query (auto-discovery + resilient).
+        // Estrategia:
+        //   1) Login y captura del EMC-CSRF-TOKEN.
+        //   2) GET /api/types/metric/instances para construir la lista REAL de paths
+        //      real-time disponibles en esta cabina/OE. Filtramos por sufijos que nos
+        //      interesan (CPU, LUN IOPS/BW/latency, red, FE FC/iSCSI).
+        //   3) Si el catálogo no devuelve isRealtimeAvailable o sale vacío, caemos a
+        //      una wishlist canónica con wildcards.
+        //   4) POST /api/types/metricRealTimeQuery/instances con esos paths. Si la
+        //      cabina rechaza alguno con "Invalid stat path", lo retiramos y
+        //      reintentamos hasta 10 veces.
+        //   5) Sleep + GET del resultado, DELETE del query.
+        try {
+            var url      = '{$UNITY.URL}';
+            var user     = '{$UNITY.USER}';
+            var pass     = '{$UNITY.PASSWORD}';
+            var interval = parseInt('{$UNITY.PERF.INTERVAL}') || 60;
+
+            // Sufijos canónicos que nos interesan (independientes de cómo represente
+            // el array los wildcards: 'sp.*.cpu...' o 'sp.spa.cpu...').
+            var WANT = [
+                'cpu.summary.utilization',
+                'cpu.summary.busyTicks',
+                'cpu.summary.idleTicks',
+                'storage.lun.*.totalIoRate',
+                'storage.lun.*.readIoRate',
+                'storage.lun.*.writeIoRate',
+                'storage.lun.*.totalBandwidth',
+                'storage.lun.*.readBandwidth',
+                'storage.lun.*.writeBandwidth',
+                'storage.lun.*.responseTime',
+                'storage.lun.*.queueLength',
+                'net.basic.inBytesRate',
+                'net.basic.outBytesRate',
+                'fibreChannel.fePort.*.totalBandwidth',
+                'iscsi.fePort.*.totalBandwidth'
+            ];
+
+            // Wishlist por defecto (si no podemos descubrir el catálogo).
+            var FALLBACK_PATHS = [
+                'sp.*.cpu.summary.utilization',
+                'sp.*.cpu.summary.busyTicks',
+                'sp.*.cpu.summary.idleTicks',
+                'sp.*.storage.lun.*.totalIoRate',
+                'sp.*.storage.lun.*.readIoRate',
+                'sp.*.storage.lun.*.writeIoRate',
+                'sp.*.storage.lun.*.totalBandwidth',
+                'sp.*.storage.lun.*.readBandwidth',
+                'sp.*.storage.lun.*.writeBandwidth',
+                'sp.*.storage.lun.*.responseTime',
+                'sp.*.storage.lun.*.queueLength',
+                'sp.*.net.basic.inBytesRate',
+                'sp.*.net.basic.outBytesRate',
+                'sp.*.fibreChannel.fePort.*.totalBandwidth',
+                'sp.*.iscsi.fePort.*.totalBandwidth'
+            ];
+
+            var req = new HttpRequest();
+            req.addHeader('X-EMC-REST-CLIENT: true');
+            req.addHeader('Accept: application/json');
+            req.addHeader('Content-Type: application/json');
+            req.setHttpAuth(HTTPAUTH_BASIC, user, pass);
+
+            // 1) Login + CSRF
+            req.get(url + '/api/types/loginSessionInfo/instances');
+            var headers = req.getHeaders();
+            var csrf = null;
+            for (var k in headers) {
+                if (k.toLowerCase() === 'emc-csrf-token') { csrf = headers[k]; break; }
+            }
+            if (!csrf) throw 'No EMC-CSRF-TOKEN returned by login';
+            req.addHeader('EMC-CSRF-TOKEN: ' + csrf);
+
+            // 2) Descubrir catálogo de métricas
+            var paths = [];
+            try {
+                var catResp = req.get(url + '/api/types/metric/instances?fields=path,isRealtimeAvailable&compact=true&per_page=10000');
+                var cat = JSON.parse(catResp);
+                var entries = (cat && cat.entries) || [];
+                for (var i = 0; i < entries.length; i++) {
+                    var c = entries[i].content;
+                    if (!c || !c.path) continue;
+                    // Si el catalog reporta isRealtimeAvailable=false, saltar
+                    if (c.isRealtimeAvailable === false) continue;
+                    for (var j = 0; j < WANT.length; j++) {
+                        var w = WANT[j];
+                        // Match por sufijo: comparamos parte final del path
+                        if (c.path.length >= w.length &&
+                            c.path.substr(c.path.length - w.length) === w) {
+                            paths.push(c.path);
+                            break;
+                        }
+                    }
+                }
+                Zabbix.log(4, 'unity perf: catalog gave ' + paths.length + ' real-time paths');
+            } catch (e) {
+                Zabbix.log(3, 'unity perf: catalog discovery failed: ' + e + ' -> using fallback');
+            }
+
+            if (paths.length === 0) {
+                Zabbix.log(4, 'unity perf: empty discovery -> using FALLBACK_PATHS');
+                paths = FALLBACK_PATHS.slice();
+            }
+
+            // 3) POST con retries
+            var qid = null;
+            var maxAttempts = 10;
+            for (var attempt = 0; attempt < maxAttempts && paths.length > 0; attempt++) {
+                var qresp;
+                try {
+                    qresp = req.post(url + '/api/types/metricRealTimeQuery/instances',
+                                     JSON.stringify({paths: paths, interval: interval}));
+                } catch (e) {
+                    throw 'POST failed: ' + e;
+                }
+                var status = 0;
+                try { status = req.getStatus(); } catch (e) {}
+
+                if (status >= 200 && status < 300) {
+                    try {
+                        var q = JSON.parse(qresp);
+                        qid = q && q.content && q.content.id;
+                    } catch (e) {}
+                    if (qid) break;
+                }
+
+                // Extraer "Invalid stat path specified: <path>"
+                var bad = null;
+                try {
+                    var errJson = JSON.parse(qresp);
+                    var msgs = (errJson && errJson.error && errJson.error.messages) || [];
+                    for (var j = 0; j < msgs.length; j++) {
+                        var m = msgs[j];
+                        var text = '';
+                        for (var lang in m) { text += ' ' + m[lang]; }
+                        var rx = /Invalid stat path[^:]*:\s*([^\s.,]+(?:\.[^\s.,]+)*)/;
+                        var match = text.match(rx);
+                        if (match && match[1]) { bad = match[1].replace(/[.,]+$/, ''); break; }
+                    }
+                } catch (e) {}
+
+                if (bad) {
+                    Zabbix.log(4, 'unity perf: removing invalid path ' + bad);
+                    var newPaths = [];
+                    for (var n = 0; n < paths.length; n++) {
+                        if (paths[n] !== bad) newPaths.push(paths[n]);
+                    }
+                    if (newPaths.length === paths.length) {
+                        throw 'Could not remove path ' + bad + ' from list';
+                    }
+                    paths = newPaths;
+                    continue;
+                }
+
+                throw 'metricRealTimeQuery rejected and no parseable invalid path: status ' + status + ' body ' + qresp;
+            }
+
+            if (!qid) throw 'No valid paths accepted after ' + maxAttempts + ' attempts';
+
+            Zabbix.sleep((interval + 5) * 1000);
+
+            var rresp = req.get(url + '/api/types/metricQueryResult/instances?filter=queryId%20EQ%20' + qid +
+                                '&fields=path,values,timestamp,interval,queryId&per_page=5000');
+
+            try { req.customRequest('DELETE', url + '/api/instances/metricRealTimeQuery/' + qid, ''); } catch (e) {}
+
+            return rresp;
+        } catch (err) {
+            Zabbix.log(3, 'unity perf script error: ' + err);
+            throw err;
+        }
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 056e4d77d13a490bb973d9361e441568
+      name: 'Unity perf: SP CPU utilization (avg)'
+      type: DEPENDENT
+      key: unity.perf.sp.cpu.avg
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: '%'
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.cpu\\\\.summary\\\\.utilization$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('avg'==='avg') return acc/n; if('avg'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 53336c4d85a74a7bba52d28b7b3dfff8
+      name: 'Unity perf: SP CPU utilization (max)'
+      type: DEPENDENT
+      key: unity.perf.sp.cpu.max
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: '%'
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.cpu\\\\.summary\\\\.utilization$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('max'==='avg') return acc/n; if('max'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 4ae58c9db0514dd4bba177ac5b5b2963
+      name: 'Unity perf: total IOPS'
+      type: DEPENDENT
+      key: unity.perf.iops.total
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: '!io/s'
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.storage\\\\.lun\\\\..*\\\\.totalIoRate$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 521773c2a6824b4fad559e85a6036b8f
+      name: 'Unity perf: read IOPS'
+      type: DEPENDENT
+      key: unity.perf.iops.read
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: '!io/s'
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.storage\\\\.lun\\\\..*\\\\.readIoRate$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: f821b81aa4d44c30a81eb59f80b38001
+      name: 'Unity perf: write IOPS'
+      type: DEPENDENT
+      key: unity.perf.iops.write
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: '!io/s'
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.storage\\\\.lun\\\\..*\\\\.writeIoRate$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 3a9f8fca12254a5d8d31d41a05925184
+      name: 'Unity perf: total bandwidth (B/s)'
+      type: DEPENDENT
+      key: unity.perf.bw.total
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: Bps
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.storage\\\\.lun\\\\..*\\\\.totalBandwidth$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 426d942415524fbe8bfbf741f6a62dbc
+      name: 'Unity perf: avg response time (ms)'
+      type: DEPENDENT
+      key: unity.perf.lun.latency
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: ms
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.storage\\\\.lun\\\\..*\\\\.responseTime$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('avg'==='avg') return acc/n; if('avg'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: 9fafab45125d42aa8075b723e77c6a50
+      name: 'Unity perf: net inBytesRate (Bps)'
+      type: DEPENDENT
+      key: unity.perf.net.in
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: Bps
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.net\\\\.basic\\\\.inBytesRate$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    - uuid: dbf85ebf79744182aa3a6caf1a3f2dc7
+      name: 'Unity perf: net outBytesRate (Bps)'
+      type: DEPENDENT
+      key: unity.perf.net.out
+      delay: '0'
+      history: 7d
+      trends: 365d
+      value_type: FLOAT
+      units: Bps
+      master_item:
+        key: unity.perf.get
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "var d; try{d=JSON.parse(value);}catch(e){return 0;} if(!d||!d.entries) return 0; var rx=new RegExp('^sp\\\\.[^.]+\\\\.net\\\\.basic\\\\.outBytesRate$'); var acc=0,n=0,mx=0; function walk(o){  if(o===null||o===undefined) return;   if(typeof o==='number'){acc+=o;n++;if(o>mx)mx=o;return;}   if(typeof o==='string'){var f=parseFloat(o);if(!isNaN(f)){acc+=f;n++;if(f>mx)mx=f;}return;}   if(typeof o==='object'){for(var k in o) walk(o[k]);} } for (var i=0;i<d.entries.length;i++){var c=d.entries[i].content; if(c&&rx.test(c.path)) walk(c.values);} if(n===0) return 0; if('sum'==='avg') return acc/n; if('sum'==='max') return mx; return acc;"
+      tags:
+      - tag: component
+        value: performance
+    discovery_rules:
+    - uuid: 59974226a3314d979b0b444681433084
+      name: 'Unity: Licenses discovery'
+      type: HTTP_AGENT
+      key: unity.lld.licenses
+      delay: 1h
+      description: ''
+      url: "{$UNITY.URL}/api/types/license/instances?fields=id,name,isInstalled,isValid,issued,expires,version,isPermanent"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);if(d&&d.entries){for(var i=0;i<d.entries.length;i++){var c=d.entries[i].content;if(c){if(c.isPermanent===undefined||c.isPermanent===null)c.isPermanent=false;}}}return JSON.stringify(d);}catch(e){return value;}"
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#LIC.ID}'
+        path: $.id
+      - lld_macro: '{#LIC.NAME}'
+        path: $.name
+      - lld_macro: '{#LIC.PERMANENT}'
+        path: $.isPermanent
+      item_prototypes:
+      - uuid: 297cad236a674124be842354ee88b3ea
+        name: 'Unity license [{#LIC.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.license.get[{#LIC.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/license/{#LIC.ID}?fields=id,name,isInstalled,isValid,issued,expires,isPermanent,version"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 1h
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 9632edce21c04642b7f010e0afbe43f4
+        name: 'Unity license [{#LIC.NAME}]: installed'
+        type: DEPENDENT
+        key: unity.license.installed[{#LIC.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.isInstalled
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: BOOL_TO_DECIMAL
+          parameters:
+          - ''
+        master_item:
+          key: unity.license.get[{#LIC.ID}]
+        tags: []
+        valuemap:
+          name: Unity boolean
+      - uuid: f897ca64d74f4cbe9afae85b651f8bf9
+        name: 'Unity license [{#LIC.NAME}]: valid'
+        type: DEPENDENT
+        key: unity.license.valid[{#LIC.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.isValid
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: BOOL_TO_DECIMAL
+          parameters:
+          - ''
+        master_item:
+          key: unity.license.get[{#LIC.ID}]
+        tags: []
+        valuemap:
+          name: Unity boolean
+      - uuid: 079b09e5aecc42679845d7976a9b4a0d
+        name: 'Unity license [{#LIC.NAME}]: expires (epoch)'
+        type: DEPENDENT
+        key: unity.license.expires[{#LIC.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: unixtime
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.expires
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        - type: JAVASCRIPT
+          parameters:
+          - if(!value||value=='null'||value=='')return 0;return Math.floor(new Date(value).getTime()/1000);
+        master_item:
+          key: unity.license.get[{#LIC.ID}]
+        tags: []
+      trigger_prototypes:
+      - uuid: 546ba939908443068e518081f2b6c765
+        expression: last(/Dell EMC Unity by HTTP/unity.license.valid[{#LIC.ID}])=0
+        name: 'Unity license [{#LIC.NAME}]: not valid'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 0b1b41a682c74d53bf22b594b55e81ec
+        expression: "last(/Dell EMC Unity by HTTP/unity.license.expires[{#LIC.ID}])>0 and (last(/Dell EMC Unity by HTTP/unity.license.expires[{#LIC.ID}])-now())<2592000 and (last(/Dell EMC Unity by HTTP/unity.license.expires[{#LIC.ID}])-now())>0"
+        name: 'Unity license [{#LIC.NAME}]: expires in <30 days'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: dd7c0c88e9824be1b1782ae6e780e320
+        expression: "last(/Dell EMC Unity by HTTP/unity.license.expires[{#LIC.ID}])>0 and (last(/Dell EMC Unity by HTTP/unity.license.expires[{#LIC.ID}])-now())<0"
+        name: 'Unity license [{#LIC.NAME}]: expired'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      overrides:
+      - name: 'Permanent licenses: skip expiration prototypes'
+        step: '1'
+        filter:
+          evaltype: AND
+          conditions:
+          - macro: '{#LIC.PERMANENT}'
+            value: ^(true|True|TRUE|1)$
+            operator: MATCHES_REGEX
+            formulaid: A
+        operations:
+        - operationobject: ITEM_PROTOTYPE
+          operator: REGEXP
+          value: expires
+          status: DISABLED
+        - operationobject: TRIGGER_PROTOTYPE
+          operator: REGEXP
+          value: (expires|expired)
+          status: DISABLED
+    - uuid: e8e138cf192140c98e80c5db2f9f2e73
+      name: 'Unity: Storage Processors discovery'
+      type: HTTP_AGENT
+      key: unity.lld.sp
+      delay: 10m
+      description: ''
+      url: "{$UNITY.URL}/api/types/storageProcessor/instances?fields=id,name,health,model,slotNumber,memorySize,emcSerialNumber,parent,isRescueMode"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#SP.ID}'
+        path: $.id
+      - lld_macro: '{#SP.NAME}'
+        path: $.name
+      - lld_macro: '{#SP.SLOT}'
+        path: $.slotNumber
+      item_prototypes:
+      - uuid: 24f4156d8d334a2fa6c370cab418fe9a
+        name: 'Unity SP [{#SP.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.sp.get[{#SP.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/storageProcessor/{#SP.ID}?fields=id,name,health,model,slotNumber,memorySize,emcSerialNumber,isRescueMode"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 5m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: d50af1d9140e435e8ffb0b727d4890f2
+        name: 'Unity SP [{#SP.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.sp.health[{#SP.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.sp.get[{#SP.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: fd92e0f762c349f0adc2d27b0c79e3e9
+        name: 'Unity SP [{#SP.NAME}]: health description'
+        type: DEPENDENT
+        key: unity.sp.healthdesc[{#SP.ID}]
+        delay: '0'
+        history: 7d
+        trends: '0'
+        value_type: CHAR
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.descriptionIds
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: JAVASCRIPT
+          parameters:
+          - try{var v=JSON.parse(value);return Array.isArray(v)?v.join(', '):value;}catch(e){return value;}
+        master_item:
+          key: unity.sp.get[{#SP.ID}]
+        tags: []
+      - uuid: 70ae1595e3994ba38327bf9481677cd3
+        name: 'Unity SP [{#SP.NAME}]: memory size'
+        type: DEPENDENT
+        key: unity.sp.memory[{#SP.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: MB
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.memorySize
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.sp.get[{#SP.ID}]
+        tags: []
+      - uuid: 774b531e62d74e6592695b358c659174
+        name: 'Unity SP [{#SP.NAME}]: model'
+        type: DEPENDENT
+        key: unity.sp.model[{#SP.ID}]
+        delay: '0'
+        history: 7d
+        trends: '0'
+        value_type: CHAR
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.model
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.sp.get[{#SP.ID}]
+        tags: []
+      - uuid: 768455de544c40efa1bc62ffaf9f5629
+        name: 'Unity SP [{#SP.NAME}]: rescue mode'
+        type: DEPENDENT
+        key: unity.sp.rescue[{#SP.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.isRescueMode
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: BOOL_TO_DECIMAL
+          parameters:
+          - ''
+        master_item:
+          key: unity.sp.get[{#SP.ID}]
+        tags: []
+        valuemap:
+          name: Unity boolean
+      trigger_prototypes:
+      - uuid: 6235d6e835b74eeba2518829c3453aee
+        expression: "last(/Dell EMC Unity by HTTP/unity.sp.health[{#SP.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.sp.health[{#SP.ID}])<>7"
+        name: 'Unity SP [{#SP.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 89b80e1bddd64d3d8d40aab2fd637a2a
+        expression: last(/Dell EMC Unity by HTTP/unity.sp.rescue[{#SP.ID}])=1
+        name: 'Unity SP [{#SP.NAME}]: in rescue mode'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 360f721edcf24ce991ee47b596ee810a
+      name: 'Unity: Disks discovery'
+      type: HTTP_AGENT
+      key: unity.lld.disk
+      delay: 30m
+      description: ''
+      url: "{$UNITY.URL}/api/types/disk/instances?fields=id,name,health,model,size,rpm,diskTechnology,slotNumber,parent,tierType,wwn"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#DISK.ID}'
+        path: $.id
+      - lld_macro: '{#DISK.NAME}'
+        path: $.name
+      - lld_macro: '{#DISK.SLOT}'
+        path: $.slotNumber
+      item_prototypes:
+      - uuid: 8d8858c0270e430ab351d38b2edc45cb
+        name: 'Unity disk [{#DISK.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.disk.get[{#DISK.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/disk/{#DISK.ID}?fields=id,name,health,model,size,rpm,diskTechnology,slotNumber,tierType"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 2321711e1afd461e8bb042c625d239de
+        name: 'Unity disk [{#DISK.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.disk.health[{#DISK.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.disk.get[{#DISK.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: f05cb0eacb5346baacd901a6c0887803
+        name: 'Unity disk [{#DISK.NAME}]: size'
+        type: DEPENDENT
+        key: unity.disk.size[{#DISK.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.size
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.disk.get[{#DISK.ID}]
+        tags: []
+      - uuid: 1511b676ee9a4b33afc0b8ae377f1ce7
+        name: 'Unity disk [{#DISK.NAME}]: model'
+        type: DEPENDENT
+        key: unity.disk.model[{#DISK.ID}]
+        delay: '0'
+        history: 7d
+        trends: '0'
+        value_type: CHAR
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.model
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.disk.get[{#DISK.ID}]
+        tags: []
+      - uuid: 65fb462c4eaa49a3803b8d539f4e9bc8
+        name: 'Unity disk [{#DISK.NAME}]: tier type'
+        type: DEPENDENT
+        key: unity.disk.tier[{#DISK.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.tierType
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.disk.get[{#DISK.ID}]
+        tags: []
+      - uuid: 2bab1831733a44979d1a9a286f0964c3
+        name: 'Unity disk [{#DISK.NAME}]: technology'
+        type: DEPENDENT
+        key: unity.disk.tech[{#DISK.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.diskTechnology
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.disk.get[{#DISK.ID}]
+        tags: []
+      trigger_prototypes:
+      - uuid: 03279eb8dde54d75acf72539a8aac4a3
+        expression: "last(/Dell EMC Unity by HTTP/unity.disk.health[{#DISK.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.disk.health[{#DISK.ID}])<>7"
+        name: 'Unity disk [{#DISK.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 2565f983236e429c9c7083ff5473a485
+      name: 'Unity: DAE/Enclosure discovery'
+      type: HTTP_AGENT
+      key: unity.lld.dae
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/dae/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#DAE.ID}'
+        path: $.id
+      - lld_macro: '{#DAE.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 3e1a79b8d55049d6bf2c3333f2ca7759
+        name: 'Unity DAE/Enclosure [{#DAE.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.dae.get[{#DAE.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/dae/{#DAE.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 1f901259ea214265a02174931d10f20e
+        name: 'Unity DAE/Enclosure [{#DAE.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.dae.health[{#DAE.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.dae.get[{#DAE.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: d5b2a02b727349209e8b2742e721aa61
+        expression: "last(/Dell EMC Unity by HTTP/unity.dae.health[{#DAE.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.dae.health[{#DAE.ID}])<>7"
+        name: 'Unity DAE/Enclosure [{#DAE.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: efd9bc17dd144ec7859d6de987ea8a2c
+      name: 'Unity: Power Supply discovery'
+      type: HTTP_AGENT
+      key: unity.lld.powersupply
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/powerSupply/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#POWERSUPPLY.ID}'
+        path: $.id
+      - lld_macro: '{#POWERSUPPLY.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 902d3b35b6234b6a9568d01a704d9d30
+        name: 'Unity Power Supply [{#POWERSUPPLY.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.powersupply.get[{#POWERSUPPLY.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/powerSupply/{#POWERSUPPLY.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: ccd565c3a0204f25bfca06dc6a53f205
+        name: 'Unity Power Supply [{#POWERSUPPLY.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.powersupply.health[{#POWERSUPPLY.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.powersupply.get[{#POWERSUPPLY.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 628a434843404298abb69da975f24f5b
+        expression: "last(/Dell EMC Unity by HTTP/unity.powersupply.health[{#POWERSUPPLY.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.powersupply.health[{#POWERSUPPLY.ID}])<>7"
+        name: 'Unity Power Supply [{#POWERSUPPLY.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 1de1ffbf93d14ecaafacd6be32edf705
+      name: 'Unity: Fan discovery'
+      type: HTTP_AGENT
+      key: unity.lld.fan
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/fan/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#FAN.ID}'
+        path: $.id
+      - lld_macro: '{#FAN.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: cef48cc64614413a86b524ca5a537ea3
+        name: 'Unity Fan [{#FAN.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.fan.get[{#FAN.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/fan/{#FAN.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: aafd282647a64de79661bea90de60627
+        name: 'Unity Fan [{#FAN.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.fan.health[{#FAN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.fan.get[{#FAN.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: f690cc937d0742dbb972cf2792009c6d
+        expression: "last(/Dell EMC Unity by HTTP/unity.fan.health[{#FAN.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.fan.health[{#FAN.ID}])<>7"
+        name: 'Unity Fan [{#FAN.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 959e815efbc14906b1fbd31e8b033366
+      name: 'Unity: Battery discovery'
+      type: HTTP_AGENT
+      key: unity.lld.battery
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/battery/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#BATTERY.ID}'
+        path: $.id
+      - lld_macro: '{#BATTERY.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 783ef45c2748411e9e5b5c9816be504a
+        name: 'Unity Battery [{#BATTERY.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.battery.get[{#BATTERY.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/battery/{#BATTERY.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 1950e1b011e748b19a2aeb351a0e5f15
+        name: 'Unity Battery [{#BATTERY.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.battery.health[{#BATTERY.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.battery.get[{#BATTERY.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 10c8c8fe45194c46a0ab117ef7173e35
+        expression: "last(/Dell EMC Unity by HTTP/unity.battery.health[{#BATTERY.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.battery.health[{#BATTERY.ID}])<>7"
+        name: 'Unity Battery [{#BATTERY.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: c68ebb09830142a48555cb4114929234
+      name: 'Unity: IO Module discovery'
+      type: HTTP_AGENT
+      key: unity.lld.iomodule
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/ioModule/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#IOMODULE.ID}'
+        path: $.id
+      - lld_macro: '{#IOMODULE.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 5871274a63134c38b75007a4f68c7a4a
+        name: 'Unity IO Module [{#IOMODULE.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.iomodule.get[{#IOMODULE.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/ioModule/{#IOMODULE.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 7bd57290b6de465886c70d65dedfb197
+        name: 'Unity IO Module [{#IOMODULE.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.iomodule.health[{#IOMODULE.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.iomodule.get[{#IOMODULE.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 1653f95d046949fc983729c43a00f39f
+        expression: "last(/Dell EMC Unity by HTTP/unity.iomodule.health[{#IOMODULE.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.iomodule.health[{#IOMODULE.ID}])<>7"
+        name: 'Unity IO Module [{#IOMODULE.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 593af02006054d309a87cb2824740575
+      name: 'Unity: Link Control Card discovery'
+      type: HTTP_AGENT
+      key: unity.lld.lcc
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/lcc/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#LCC.ID}'
+        path: $.id
+      - lld_macro: '{#LCC.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 5f92fc368ebc4a118ebeff8bde4a9de5
+        name: 'Unity Link Control Card [{#LCC.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.lcc.get[{#LCC.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/lcc/{#LCC.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 7eac427e4e324ef58a166fb4e6fa8bbe
+        name: 'Unity Link Control Card [{#LCC.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.lcc.health[{#LCC.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.lcc.get[{#LCC.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 1de105b6e09d436496636e41686668cc
+        expression: "last(/Dell EMC Unity by HTTP/unity.lcc.health[{#LCC.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.lcc.health[{#LCC.ID}])<>7"
+        name: 'Unity Link Control Card [{#LCC.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 6931fcd58b8f48d1883327a5f13feb69
+      name: 'Unity: System Status Card discovery'
+      type: HTTP_AGENT
+      key: unity.lld.ssc
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/ssc/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#SSC.ID}'
+        path: $.id
+      - lld_macro: '{#SSC.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 66c95f08a3d64fd9ab8a38f7ff75dd47
+        name: 'Unity System Status Card [{#SSC.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.ssc.get[{#SSC.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/ssc/{#SSC.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 28d3d266251c4731919d0f2b9d0faef1
+        name: 'Unity System Status Card [{#SSC.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.ssc.health[{#SSC.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.ssc.get[{#SSC.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 655e6b5ced594ce7a085cc3970ca76f3
+        expression: "last(/Dell EMC Unity by HTTP/unity.ssc.health[{#SSC.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.ssc.health[{#SSC.ID}])<>7"
+        name: 'Unity System Status Card [{#SSC.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 74a202e20bf44c8083600e6363ed7e98
+      name: 'Unity: Internal SSD discovery'
+      type: HTTP_AGENT
+      key: unity.lld.ssd
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/ssd/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#SSD.ID}'
+        path: $.id
+      - lld_macro: '{#SSD.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 82fd12a86cec43608f2b4f75cde40961
+        name: 'Unity Internal SSD [{#SSD.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.ssd.get[{#SSD.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/ssd/{#SSD.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: aca55b1cfe3b49c3a7f450503ba85ca8
+        name: 'Unity Internal SSD [{#SSD.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.ssd.health[{#SSD.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.ssd.get[{#SSD.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: 3d3359f3e0b9427f93f4d9498df41eef
+        expression: "last(/Dell EMC Unity by HTTP/unity.ssd.health[{#SSD.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.ssd.health[{#SSD.ID}])<>7"
+        name: 'Unity Internal SSD [{#SSD.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: b09dfc3fc63b4f7abef3a8fe0ee50763
+      name: 'Unity: Memory Module discovery'
+      type: HTTP_AGENT
+      key: unity.lld.memorymodule
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/memoryModule/instances?fields=id,name,health,model,parent'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#MEMORYMODULE.ID}'
+        path: $.id
+      - lld_macro: '{#MEMORYMODULE.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: ab3c80be5ca34a12b16baea5dfbf6418
+        name: 'Unity Memory Module [{#MEMORYMODULE.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.memorymodule.get[{#MEMORYMODULE.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: '{$UNITY.URL}/api/instances/memoryModule/{#MEMORYMODULE.ID}?fields=id,name,health,model'
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 10m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: a154838ea13542db9b8219b0a4a735e0
+        name: 'Unity Memory Module [{#MEMORYMODULE.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.memorymodule.health[{#MEMORYMODULE.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.memorymodule.get[{#MEMORYMODULE.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      trigger_prototypes:
+      - uuid: a6bd9f44211d46a08ce5e387a8cf9378
+        expression: "last(/Dell EMC Unity by HTTP/unity.memorymodule.health[{#MEMORYMODULE.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.memorymodule.health[{#MEMORYMODULE.ID}])<>7"
+        name: 'Unity Memory Module [{#MEMORYMODULE.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+    - uuid: 4064cf4e502e4e6daa59cbf0428e8a86
+      name: 'Unity: Pools discovery'
+      type: HTTP_AGENT
+      key: unity.lld.pool
+      delay: 5m
+      description: ''
+      url: "{$UNITY.URL}/api/types/pool/instances?fields=id,name,health,sizeFree,sizeTotal,sizeUsed,sizeSubscribed,sizePreallocated,dataReductionPercent,dataReductionRatio,dataReductionSizeSaved,raidType"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#POOL.ID}'
+        path: $.id
+      - lld_macro: '{#POOL.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 68305ae300054419ba0037a66ad23940
+        name: 'Unity pool [{#POOL.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.pool.get[{#POOL.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/pool/{#POOL.ID}?fields=id,name,health,sizeFree,sizeTotal,sizeUsed,sizeSubscribed,sizePreallocated,dataReductionPercent,dataReductionRatio,dataReductionSizeSaved,raidType"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 2m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 3a12fb9ce1d6450897bdf316b8e9d057
+        name: 'Unity pool [{#POOL.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.pool.health[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: aedd088954af4a2792e61b8e36ad85ca
+        name: 'Unity pool [{#POOL.NAME}]: total size'
+        type: DEPENDENT
+        key: unity.pool.size.total[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeTotal
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: 7cccfc2d5f264f309f24f2ad7ed66784
+        name: 'Unity pool [{#POOL.NAME}]: used size'
+        type: DEPENDENT
+        key: unity.pool.size.used[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeUsed
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: ec9cc925157940ab87b1b4b26ec26bd9
+        name: 'Unity pool [{#POOL.NAME}]: free size'
+        type: DEPENDENT
+        key: unity.pool.size.free[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeFree
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: 1ab5de926d8043c8af4e2d51dff34932
+        name: 'Unity pool [{#POOL.NAME}]: subscribed'
+        type: DEPENDENT
+        key: unity.pool.size.subs[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeSubscribed
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: ce533d059ceb48bb94e338d24020f2db
+        name: 'Unity pool [{#POOL.NAME}]: preallocated'
+        type: DEPENDENT
+        key: unity.pool.size.prealloc[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizePreallocated
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: 3dc56eab0c324a80aed61a6d7b6227a7
+        name: 'Unity pool [{#POOL.NAME}]: data reduction ratio'
+        type: DEPENDENT
+        key: unity.pool.dr.ratio[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: :1
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.dataReductionRatio
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: c7a63ea6b074446dbbd6a2d8afbba96b
+        name: 'Unity pool [{#POOL.NAME}]: data reduction percent'
+        type: DEPENDENT
+        key: unity.pool.dr.percent[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: '%'
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.dataReductionPercent
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: 37d69037d5e244009754fa4a1d311e16
+        name: 'Unity pool [{#POOL.NAME}]: data reduction saved'
+        type: DEPENDENT
+        key: unity.pool.dr.saved[{#POOL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.dataReductionSizeSaved
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.pool.get[{#POOL.ID}]
+        tags: []
+      - uuid: 73dd683b5dd24edc88eba300022c316b
+        name: 'Unity pool [{#POOL.NAME}]: used %'
+        type: CALCULATED
+        key: unity.pool.pused[{#POOL.ID}]
+        delay: 2m
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: '%'
+        params: "100*last(//unity.pool.size.used[{#POOL.ID}])/(last(//unity.pool.size.total[{#POOL.ID}])+(last(//unity.pool.size.total[{#POOL.ID}])=0))"
+        tags: []
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - return value;
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+      - uuid: be249275ec6f4754afa02c1442807f82
+        name: 'Unity pool [{#POOL.NAME}]: subscription %'
+        type: CALCULATED
+        key: unity.pool.psubs[{#POOL.ID}]
+        delay: 2m
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: '%'
+        params: "100*last(//unity.pool.size.subs[{#POOL.ID}])/(last(//unity.pool.size.total[{#POOL.ID}])+(last(//unity.pool.size.total[{#POOL.ID}])=0))"
+        tags: []
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - return value;
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+      trigger_prototypes:
+      - uuid: 7890c9f3dcc7472ca2da099b1c319b9c
+        expression: "last(/Dell EMC Unity by HTTP/unity.pool.health[{#POOL.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.pool.health[{#POOL.ID}])<>7 and last(/Dell EMC Unity by HTTP/unity.pool.health[{#POOL.ID}])<25"
+        name: 'Unity pool [{#POOL.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 9855cf24010d447287478d07f10d3ab6
+        expression: last(/Dell EMC Unity by HTTP/unity.pool.pused[{#POOL.ID}])>{$UNITY.POOL.PUSED.WARN}
+        name: 'Unity pool [{#POOL.NAME}]: usage above {$UNITY.POOL.PUSED.WARN}%'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: eaecd27b707a4464b417ec804297a65c
+        expression: last(/Dell EMC Unity by HTTP/unity.pool.pused[{#POOL.ID}])>{$UNITY.POOL.PUSED.HIGH}
+        name: 'Unity pool [{#POOL.NAME}]: usage above {$UNITY.POOL.PUSED.HIGH}%'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: da83370666df438fb95b36ff5c310bb1
+        expression: last(/Dell EMC Unity by HTTP/unity.pool.pused[{#POOL.ID}])>{$UNITY.POOL.PUSED.CRIT}
+        name: 'Unity pool [{#POOL.NAME}]: usage above {$UNITY.POOL.PUSED.CRIT}%'
+        priority: DISASTER
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 85b0656e7535400c8dd3270882d4c443
+        expression: last(/Dell EMC Unity by HTTP/unity.pool.psubs[{#POOL.ID}])>{$UNITY.POOL.SUBSCRIBED.WARN}
+        name: 'Unity pool [{#POOL.NAME}]: oversubscribed > {$UNITY.POOL.SUBSCRIBED.WARN}%'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 797daa31ce0a45398c65a4ec07da91a7
+        expression: last(/Dell EMC Unity by HTTP/unity.pool.health[{#POOL.ID}])>=25
+        name: 'Unity pool [{#POOL.NAME}]: health critical (offline/non-recoverable)'
+        priority: DISASTER
+        description: Pool offline / non-recoverable.
+        manual_close: 'NO'
+        tags: []
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#POOL.NAME}'
+          value: '{$UNITY.POOL.LLD.MATCHES}'
+          operator: MATCHES_REGEX
+          formulaid: A
+        - macro: '{#POOL.NAME}'
+          value: '{$UNITY.POOL.LLD.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+    - uuid: 3b56fac4cf6c48e09b23c273a875330f
+      name: 'Unity: LUNs discovery'
+      type: HTTP_AGENT
+      key: unity.lld.lun
+      delay: 5m
+      description: ''
+      url: "{$UNITY.URL}/api/types/lun/instances?fields=id,name,health,sizeTotal,sizeAllocated,sizeUsed,pool.name,type,isThinEnabled,isDataReductionEnabled,isAdvancedDedupEnabled,wwn"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - "try{var d=JSON.parse(value);if(d&&d.entries){for(var i=0;i<d.entries.length;i++){var c=d.entries[i].content;if(c){if(c.isThinEnabled===undefined||c.isThinEnabled===null)c.isThinEnabled=false;}}}return JSON.stringify(d);}catch(e){return value;}"
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#LUN.ID}'
+        path: $.id
+      - lld_macro: '{#LUN.NAME}'
+        path: $.name
+      - lld_macro: '{#LUN.POOL}'
+        path: $.pool.name
+      - lld_macro: '{#LUN.THIN}'
+        path: $.isThinEnabled
+      item_prototypes:
+      - uuid: 58ed9d2168a14dfc9f04c50e8e43c9e7
+        name: 'Unity LUN [{#LUN.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.lun.get[{#LUN.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/lun/{#LUN.ID}?fields=id,name,health,sizeTotal,sizeAllocated,sizeUsed,type,isThinEnabled,isDataReductionEnabled,isAdvancedDedupEnabled"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 5m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 52812fb6a5ab4c468747e792b84522dd
+        name: 'Unity LUN [{#LUN.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.lun.health[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: 7af80f3e041346cc9a1f760665a5191b
+        name: 'Unity LUN [{#LUN.NAME}]: total size'
+        type: DEPENDENT
+        key: unity.lun.size.total[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeTotal
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+      - uuid: 839a38f8b47f472c9285ea2b53b799c0
+        name: 'Unity LUN [{#LUN.NAME}]: allocated size'
+        type: DEPENDENT
+        key: unity.lun.size.alloc[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeAllocated
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+      - uuid: 53925aae2f5b4242b57ae77975b9f09c
+        name: 'Unity LUN [{#LUN.NAME}]: host-visible used'
+        type: DEPENDENT
+        key: unity.lun.size.used[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeUsed
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+      - uuid: 5f079e7ceb6c44539fee71cbdb4761c4
+        name: 'Unity LUN [{#LUN.NAME}]: thin'
+        type: DEPENDENT
+        key: unity.lun.thin[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.isThinEnabled
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: BOOL_TO_DECIMAL
+          parameters:
+          - ''
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+        valuemap:
+          name: Unity boolean
+      - uuid: 9f38011dc2b94ce2a49f1d15c46e6757
+        name: 'Unity LUN [{#LUN.NAME}]: data reduction'
+        type: DEPENDENT
+        key: unity.lun.comp[{#LUN.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.isDataReductionEnabled
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        - type: BOOL_TO_DECIMAL
+          parameters:
+          - ''
+        master_item:
+          key: unity.lun.get[{#LUN.ID}]
+        tags: []
+        valuemap:
+          name: Unity boolean
+      - uuid: 0f8aabf84827472bab117004feaa9ceb
+        name: 'Unity LUN [{#LUN.NAME}]: allocated %'
+        type: CALCULATED
+        key: unity.lun.palloc[{#LUN.ID}]
+        delay: 5m
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: '%'
+        params: "100*last(//unity.lun.size.alloc[{#LUN.ID}])/(last(//unity.lun.size.total[{#LUN.ID}])+(last(//unity.lun.size.total[{#LUN.ID}])=0))"
+        tags: []
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - return value;
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+      trigger_prototypes:
+      - uuid: 28716fd0142a4717bd58e4f611944808
+        expression: "last(/Dell EMC Unity by HTTP/unity.lun.health[{#LUN.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.lun.health[{#LUN.ID}])<>7"
+        name: 'Unity LUN [{#LUN.NAME}]: health not OK'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 35ad52eaad2f44b9a669098c48c0b211
+        expression: last(/Dell EMC Unity by HTTP/unity.lun.palloc[{#LUN.ID}])>{$UNITY.LUN.PUSED.WARN}
+        name: 'Unity LUN [{#LUN.NAME}]: allocated >{$UNITY.LUN.PUSED.WARN}%'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#LUN.NAME}'
+          value: '{$UNITY.LUN.LLD.MATCHES}'
+          operator: MATCHES_REGEX
+          formulaid: A
+        - macro: '{#LUN.NAME}'
+          value: '{$UNITY.LUN.LLD.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+      overrides:
+      - name: 'Thick LUNs: skip allocated% trigger'
+        step: '1'
+        filter:
+          evaltype: AND
+          conditions:
+          - macro: '{#LUN.THIN}'
+            value: ^(false|False|FALSE|0)$
+            operator: MATCHES_REGEX
+            formulaid: A
+        operations:
+        - operationobject: TRIGGER_PROTOTYPE
+          operator: REGEXP
+          value: allocated >
+          status: DISABLED
+    - uuid: 1b092aa49e874268a5ac954587fb56cc
+      name: 'Unity: Filesystems discovery'
+      type: HTTP_AGENT
+      key: unity.lld.fs
+      delay: 5m
+      description: ''
+      url: "{$UNITY.URL}/api/types/filesystem/instances?fields=id,name,health,sizeTotal,sizeUsed,sizeAllocated,sizePreallocated,nasServer.name,pool.name,type,isThinEnabled,isDataReductionEnabled"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#FS.ID}'
+        path: $.id
+      - lld_macro: '{#FS.NAME}'
+        path: $.name
+      - lld_macro: '{#FS.NAS}'
+        path: $.nasServer.name
+      - lld_macro: '{#FS.POOL}'
+        path: $.pool.name
+      item_prototypes:
+      - uuid: 9bba7b638f8b4fcc826855d53fd3b600
+        name: 'Unity FS [{#FS.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.fs.get[{#FS.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/filesystem/{#FS.ID}?fields=id,name,health,sizeTotal,sizeUsed,sizeAllocated,sizePreallocated,isThinEnabled,isDataReductionEnabled"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 5m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: da5c51697da749458820a67f01f2673c
+        name: 'Unity FS [{#FS.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.fs.health[{#FS.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.fs.get[{#FS.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: 7752892adc814f96aa91afd1d7e06ab9
+        name: 'Unity FS [{#FS.NAME}]: total size'
+        type: DEPENDENT
+        key: unity.fs.size.total[{#FS.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeTotal
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.fs.get[{#FS.ID}]
+        tags: []
+      - uuid: 68b976df8d7c4ddc863813f74073057e
+        name: 'Unity FS [{#FS.NAME}]: used size'
+        type: DEPENDENT
+        key: unity.fs.size.used[{#FS.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeUsed
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.fs.get[{#FS.ID}]
+        tags: []
+      - uuid: 985eb26ce09f4b14a9ba18679fa16bab
+        name: 'Unity FS [{#FS.NAME}]: allocated size'
+        type: DEPENDENT
+        key: unity.fs.size.alloc[{#FS.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: B
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.sizeAllocated
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        master_item:
+          key: unity.fs.get[{#FS.ID}]
+        tags: []
+      - uuid: bbaee9a38e5b4644872125c561f7445b
+        name: 'Unity FS [{#FS.NAME}]: used %'
+        type: CALCULATED
+        key: unity.fs.pused[{#FS.ID}]
+        delay: 5m
+        history: 7d
+        trends: 365d
+        value_type: FLOAT
+        units: '%'
+        params: "100*last(//unity.fs.size.used[{#FS.ID}])/(last(//unity.fs.size.total[{#FS.ID}])+(last(//unity.fs.size.total[{#FS.ID}])=0))"
+        tags: []
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - return value;
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+      trigger_prototypes:
+      - uuid: 33c915aac0984469b384c136bf130c3c
+        expression: "last(/Dell EMC Unity by HTTP/unity.fs.health[{#FS.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.fs.health[{#FS.ID}])<>7 and last(/Dell EMC Unity by HTTP/unity.fs.health[{#FS.ID}])<25"
+        name: 'Unity FS [{#FS.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 0f2d66bbf4554d448adbff762b3171a8
+        expression: last(/Dell EMC Unity by HTTP/unity.fs.pused[{#FS.ID}])>{$UNITY.FS.PUSED.WARN}
+        name: 'Unity FS [{#FS.NAME}]: used >{$UNITY.FS.PUSED.WARN}%'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 63af4adde4d042168cc7cf6a4c6aca82
+        expression: last(/Dell EMC Unity by HTTP/unity.fs.pused[{#FS.ID}])>{$UNITY.FS.PUSED.HIGH}
+        name: 'Unity FS [{#FS.NAME}]: used >{$UNITY.FS.PUSED.HIGH}%'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: &id003 []
+      - uuid: 00b8b3ac5a7b47928655f603f076a628
+        expression: last(/Dell EMC Unity by HTTP/unity.fs.pused[{#FS.ID}])>{$UNITY.FS.PUSED.CRIT}
+        name: 'Unity FS [{#FS.NAME}]: used >{$UNITY.FS.PUSED.CRIT}%'
+        priority: DISASTER
+        description: Filesystem at or above CRIT threshold (full / corte de servicio).
+        manual_close: 'NO'
+        tags: *id003
+      - uuid: bd3c693af05c43149dd05c6b9bbc4b1c
+        expression: last(/Dell EMC Unity by HTTP/unity.fs.health[{#FS.ID}])>=25
+        name: 'Unity FS [{#FS.NAME}]: health critical (offline/non-recoverable)'
+        priority: DISASTER
+        description: Filesystem offline / share inaccessible.
+        manual_close: 'NO'
+        tags: []
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#FS.NAME}'
+          value: '{$UNITY.FS.LLD.MATCHES}'
+          operator: MATCHES_REGEX
+          formulaid: A
+        - macro: '{#FS.NAME}'
+          value: '{$UNITY.FS.LLD.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+    - uuid: 0dc6014284ea43039f3dbc66b43b6e93
+      name: 'Unity: NAS Servers discovery'
+      type: HTTP_AGENT
+      key: unity.lld.nas
+      delay: 15m
+      description: ''
+      url: "{$UNITY.URL}/api/types/nasServer/instances?fields=id,name,health,homeSP.id,currentSP.id,isReplicationEnabled,isReplicationDestination"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#NAS.ID}'
+        path: $.id
+      - lld_macro: '{#NAS.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 7aac709dd8e9449c9e98738955fdf216
+        name: 'Unity NAS [{#NAS.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.nas.get[{#NAS.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/nasServer/{#NAS.ID}?fields=id,name,health,homeSP.id,currentSP.id,isReplicationDestination"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 5m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 83fdb1c80f6f4aa6b52df9a7e94dee2e
+        name: 'Unity NAS [{#NAS.NAME}]: health value'
+        type: DEPENDENT
+        key: unity.nas.health[{#NAS.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.health.value
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.nas.get[{#NAS.ID}]
+        tags: []
+        valuemap:
+          name: Unity health value
+      - uuid: 3b028b5483214951957731708ea33d36
+        name: 'Unity NAS [{#NAS.NAME}]: home SP'
+        type: DEPENDENT
+        key: unity.nas.homesp[{#NAS.ID}]
+        delay: '0'
+        history: 7d
+        trends: '0'
+        value_type: CHAR
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.homeSP.id
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.nas.get[{#NAS.ID}]
+        tags: []
+      - uuid: 2b64b181e9244f2997f5caf3e4d93a4b
+        name: 'Unity NAS [{#NAS.NAME}]: current SP'
+        type: DEPENDENT
+        key: unity.nas.cursp[{#NAS.ID}]
+        delay: '0'
+        history: 7d
+        trends: '0'
+        value_type: CHAR
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.currentSP.id
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.nas.get[{#NAS.ID}]
+        tags: []
+      trigger_prototypes:
+      - uuid: e90cca88a4bf4e0793962ba602d66a75
+        expression: "last(/Dell EMC Unity by HTTP/unity.nas.health[{#NAS.ID}])>5 and last(/Dell EMC Unity by HTTP/unity.nas.health[{#NAS.ID}])<>7 and last(/Dell EMC Unity by HTTP/unity.nas.health[{#NAS.ID}])<25"
+        name: 'Unity NAS [{#NAS.NAME}]: health not OK'
+        priority: HIGH
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: e4f6eaaf8d4a4ebb8876d39e5045e200
+        expression: "last(/Dell EMC Unity by HTTP/unity.nas.homesp[{#NAS.ID}],#1)<>last(/Dell EMC Unity by HTTP/unity.nas.cursp[{#NAS.ID}],#1)"
+        name: 'Unity NAS [{#NAS.NAME}]: failed over to non-home SP'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+      - uuid: 9024fca4d4954e2f842cdbd3f7bde737
+        expression: last(/Dell EMC Unity by HTTP/unity.nas.health[{#NAS.ID}])>=25
+        name: 'Unity NAS [{#NAS.NAME}]: health critical (offline/non-recoverable)'
+        priority: DISASTER
+        description: NAS server offline / SMB-NFS down.
+        manual_close: 'NO'
+        tags: []
+    - uuid: dcee922a91be4bfc9209c7c791221119
+      name: 'Unity: Replication sessions discovery'
+      type: HTTP_AGENT
+      key: unity.lld.repl
+      delay: 5m
+      description: ''
+      url: "{$UNITY.URL}/api/types/replicationSession/instances?fields=id,name,localRole,replicationResourceType,status,syncState,remoteSystem.name,maxTimeOutOfSync,lastSyncTime,networkStatus"
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#REPL.ID}'
+        path: $.id
+      - lld_macro: '{#REPL.NAME}'
+        path: $.name
+      - lld_macro: '{#REPL.ROLE}'
+        path: $.localRole
+      - lld_macro: '{#REPL.REMOTE}'
+        path: $.remoteSystem.name
+      item_prototypes:
+      - uuid: 63730b217b444bc381d2de341c1db51b
+        name: 'Unity replication [{#REPL.NAME}]: get'
+        type: HTTP_AGENT
+        key: unity.repl.get[{#REPL.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/instances/replicationSession/{#REPL.ID}?fields=id,name,localRole,status,syncState,maxTimeOutOfSync,lastSyncTime,networkStatus"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 2m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 7367b92b100048fab2373b745b8bc482
+        name: 'Unity replication [{#REPL.NAME}]: status'
+        type: DEPENDENT
+        key: unity.repl.status[{#REPL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.status
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.repl.get[{#REPL.ID}]
+        tags: []
+        valuemap:
+          name: Unity replication status
+      - uuid: 9e1672aef1de4c01a91752a1b1892adc
+        name: 'Unity replication [{#REPL.NAME}]: sync state'
+        type: DEPENDENT
+        key: unity.repl.sync[{#REPL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.syncState
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.repl.get[{#REPL.ID}]
+        tags: []
+      - uuid: dd5e169b42534b9e88efa5d58d508994
+        name: 'Unity replication [{#REPL.NAME}]: last sync (epoch)'
+        type: DEPENDENT
+        key: unity.repl.lastsync[{#REPL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: unixtime
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.lastSyncTime
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+        - type: JAVASCRIPT
+          parameters:
+          - if(!value||value=='null'||value=='')return 0;return Math.floor(new Date(value).getTime()/1000);
+        master_item:
+          key: unity.repl.get[{#REPL.ID}]
+        tags: []
+      - uuid: 65143ab571d844af914e3e315d5720ea
+        name: 'Unity replication [{#REPL.NAME}]: network status'
+        type: DEPENDENT
+        key: unity.repl.net[{#REPL.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: ''
+        description: ''
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.content.networkStatus
+          error_handler: DISCARD_VALUE
+          error_handler_params: ''
+        master_item:
+          key: unity.repl.get[{#REPL.ID}]
+        tags: []
+      - uuid: a15773ae59a6445a96df5681d0a782cc
+        name: 'Unity replication [{#REPL.NAME}]: lag (s)'
+        type: CALCULATED
+        key: unity.repl.lag[{#REPL.ID}]
+        delay: 2m
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: s
+        params: now()-last(//unity.repl.lastsync[{#REPL.ID}])
+        tags: []
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - return value;
+          error_handler: CUSTOM_VALUE
+          error_handler_params: '0'
+      trigger_prototypes:
+      - uuid: ac80907175dd43b79c88f6aa3c1570ab
+        name: 'Unity replication [{#REPL.NAME}]: remote system failed to validate (0x840C / 33804)'
+        expression: last(/Dell EMC Unity by HTTP/unity.repl.status[{#REPL.ID}])=33804
+        priority: HIGH
+        description: "Dell Unity replication status 0x840C (Remote system Failed To Validate). Fallo de validación de conexión replicación. Ver Dell KB 000055027."
+      - uuid: aa65937cc08842a29eb19704696967e4
+        name: 'Unity replication [{#REPL.NAME}]: lost sync communication (0x840E / 33806)'
+        expression: last(/Dell EMC Unity by HTTP/unity.repl.status[{#REPL.ID}])=33806
+        priority: HIGH
+        description: "Dell Unity replication status 0x840E (Lost Sync Communication). Caída de la conexión entre cabinas. Ver Dell KB 000056957."
+      - uuid: 54aa707e7175450fbb6608f25cb0c825
+        name: 'Unity replication [{#REPL.NAME}]: destination pool out of space (0x840F / 33807)'
+        expression: last(/Dell EMC Unity by HTTP/unity.repl.status[{#REPL.ID}])=33807
+        priority: HIGH
+        description: "Dell Unity replication status 0x840F (Destination Pool Out Of Space). Pool destino sin espacio. Ver Dell KB 000055683."
+    - uuid: db35d1d1e76f4f1d807ddec9c058af1f
+      name: 'Unity: Snapshots discovery (per storage resource)'
+      type: HTTP_AGENT
+      key: unity.lld.snap
+      delay: 30m
+      description: ''
+      url: '{$UNITY.URL}/api/types/storageResource/instances?fields=id,name,type'
+      authtype: BASIC
+      username: '{$UNITY.USER}'
+      password: '{$UNITY.PASSWORD}'
+      headers:
+      - *id001
+      - *id002
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      timeout: '{$UNITY.HTTP.TIMEOUT}'
+      lifetime: 7d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.entries[*].content
+        error_handler: DISCARD_VALUE
+        error_handler_params: ''
+      lld_macro_paths:
+      - lld_macro: '{#SR.ID}'
+        path: $.id
+      - lld_macro: '{#SR.NAME}'
+        path: $.name
+      item_prototypes:
+      - uuid: 071d857af42844929423fdab081f778f
+        name: 'Unity SR [{#SR.NAME}]: snaps get'
+        type: HTTP_AGENT
+        key: unity.snap.get[{#SR.ID}]
+        history: '0'
+        trends: '0'
+        value_type: TEXT
+        description: 'Master item: returns raw JSON from Unisphere REST API.'
+        url: "{$UNITY.URL}/api/types/snap/instances?filter=storageResource%20EQ%20%22{#SR.ID}%22&fields=id,name,state,size,creationTime"
+        authtype: BASIC
+        username: '{$UNITY.USER}'
+        password: '{$UNITY.PASSWORD}'
+        headers:
+        - *id001
+        - *id002
+        verify_peer: 'NO'
+        verify_host: 'NO'
+        timeout: '{$UNITY.HTTP.TIMEOUT}'
+        delay: 15m
+        tags:
+        - tag: component
+          value: raw
+      - uuid: 78fcb677318f476080f8cd1978826505
+        name: 'Unity SR [{#SR.NAME}]: latest snap age (s)'
+        type: DEPENDENT
+        key: unity.snap.lastage[{#SR.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        units: s
+        master_item:
+          key: unity.snap.get[{#SR.ID}]
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - "try{var d=JSON.parse(value);if(!d||!d.entries||d.entries.length===0)return 0;var t=0;for(var i=0;i<d.entries.length;i++){var ts=Math.floor(new Date(d.entries[i].content.creationTime).getTime()/1000);if(ts>t)t=ts;}return t==0?0:Math.floor(Date.now()/1000)-t;}catch(e){return 0;}"
+        tags: []
+      - uuid: b60d378e32ba4820b5d5f68dfe0aec04
+        name: 'Unity SR [{#SR.NAME}]: snap count'
+        type: DEPENDENT
+        key: unity.snap.count[{#SR.ID}]
+        delay: '0'
+        history: 7d
+        trends: 365d
+        value_type: UNSIGNED
+        master_item:
+          key: unity.snap.get[{#SR.ID}]
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - try{var d=JSON.parse(value);return(d&&d.entries)?d.entries.length:0;}catch(e){return 0;}
+        tags: []
+      trigger_prototypes:
+      - uuid: 1a68c1de9b0d4c1db6d5c474c1a67415
+        expression: "last(/Dell EMC Unity by HTTP/unity.snap.lastage[{#SR.ID}])>{$UNITY.SNAP.AGE.WARN} and last(/Dell EMC Unity by HTTP/unity.snap.count[{#SR.ID}])>0"
+        name: 'Unity SR [{#SR.NAME}]: no recent snapshots'
+        priority: WARNING
+        description: ''
+        manual_close: 'NO'
+        tags: []
+  triggers:
+  - uuid: 5d0f6ecea2374da385942726df6de940
+    expression: "last(/Dell EMC Unity by HTTP/unity.system.health.value)>5 and last(/Dell EMC Unity by HTTP/unity.system.health.value)<>7"
+    name: 'Unity: System health is not OK'
+    priority: WARNING
+    description: El estado de salud global del sistema no es OK.
+    manual_close: 'NO'
+    tags: []
+  - uuid: 816216d865f148c8aee3c667a92fdcff
+    expression: last(/Dell EMC Unity by HTTP/unity.alerts.count[0])>0
+    name: 'Unity: There is at least one active alert of severity Emergency'
+    priority: DISASTER
+    description: Hay alertas activas con severidad Emergency.
+    manual_close: 'NO'
+    tags: []
+  - uuid: 4c009756067d4487861e29350d2de5ee
+    expression: last(/Dell EMC Unity by HTTP/unity.alerts.count[1])>0
+    name: 'Unity: There is at least one active alert of severity Alert'
+    priority: HIGH
+    description: Hay alertas activas con severidad Alert.
+    manual_close: 'NO'
+    tags: []
+  - uuid: 8acb2650198c470f86794ee0a94254d7
+    expression: last(/Dell EMC Unity by HTTP/unity.alerts.count[2])>0
+    name: 'Unity: There is at least one active alert of severity Critical'
+    priority: HIGH
+    description: Hay alertas activas con severidad Critical.
+    manual_close: 'NO'
+    tags: []
+  - uuid: b3cb193c4cfa4f488274c83b872dcce4
+    expression: last(/Dell EMC Unity by HTTP/unity.alerts.count[3])>0
+    name: 'Unity: There is at least one active alert of severity Error'
+    priority: WARNING
+    description: Hay alertas activas con severidad Error.
+    manual_close: 'NO'
+    tags: []
+  - uuid: 67f43c2104624b51904b11c6990d8a0f
+    expression: avg(/Dell EMC Unity by HTTP/unity.perf.sp.cpu.max,5m)>{$UNITY.SP.CPU.WARN}
+    name: 'Unity: SP CPU above {$UNITY.SP.CPU.WARN}% (5m)'
+    priority: WARNING
+    description: ''
+    manual_close: 'NO'
+    tags: []
+  - uuid: b1a7619610fb488f85bcccd7caebd12c
+    expression: avg(/Dell EMC Unity by HTTP/unity.perf.sp.cpu.max,5m)>{$UNITY.SP.CPU.HIGH}
+    name: 'Unity: SP CPU above {$UNITY.SP.CPU.HIGH}% (5m)'
+    priority: WARNING
+    description: ''
+    manual_close: 'NO'
+    tags: []
